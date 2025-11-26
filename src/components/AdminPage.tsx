@@ -9,8 +9,8 @@ interface AdminPageProps {
 
 export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
   const [activeTab, setActiveTab] = useState('content');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isAuthenticated] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Events state
   const [events, setEvents] = useState<Event[]>([]);
@@ -48,41 +48,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
   const [tempLink, setTempLink] = useState<string>('');
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!supabase) {
-        console.log('Supabase not configured');
-        setIsAuthenticated(false);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('Checking auth session:', session);
-        
-        if (error) {
-          console.error('Auth check error:', error);
-          setIsAuthenticated(false);
-        } else {
-          setIsAuthenticated(!!session);
-        }
-      } catch (err) {
-        console.error('Auth check failed:', err);
-        setIsAuthenticated(false);
-      }
-      
-      setLoading(false);
-    };
-
-    checkAuth();
+    fetchData();
   }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log('User authenticated, fetching data...');
-      fetchData();
-    }
-  }, [isAuthenticated]);
 
   const fetchData = async () => {
     console.log('Fetching admin data...');
@@ -142,15 +109,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
   };
 
   const handleLogout = () => {
-    if (supabase) {
-      supabase.auth.signOut().then(() => {
-        setIsAuthenticated(false);
-        onPageChange('home');
-      });
-    } else {
-      setIsAuthenticated(false);
-      onPageChange('home');
-    }
+    onPageChange('home');
   };
 
   const handleEventSubmit = async (e: React.FormEvent) => {
