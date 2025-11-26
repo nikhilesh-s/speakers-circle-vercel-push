@@ -1,9 +1,9 @@
 /*
   # Complete database reset and seed
 
-  This migration recreates every application table, policy, and default row
-  required for the SpeakersCircle site. It also ensures three default admin
-  accounts exist in Supabase Auth with confirmed email/password login.
+  Rebuilds all content tables, policies, and initial seed data used by the
+  admin panel. No Supabase Auth objects are touched—admin access is handled
+  purely in the app with a passcode.
 */
 
 -- Required for UUID generation and password hashing
@@ -27,6 +27,7 @@ CREATE TABLE public.events (
   time text NOT NULL,
   description text NOT NULL,
   payment_link text DEFAULT '',
+  event_type text NOT NULL DEFAULT 'Special Events',
   created_at timestamptz DEFAULT now(),
   is_recurring boolean DEFAULT false,
   recurrence_type text CHECK (
@@ -75,10 +76,10 @@ CREATE POLICY "Events readable"
   TO public
   USING (true);
 
-CREATE POLICY "Events admin manage"
+CREATE POLICY "Events public manage"
   ON public.events
   FOR ALL
-  TO authenticated
+  TO public
   USING (true)
   WITH CHECK (true);
 
@@ -88,10 +89,10 @@ CREATE POLICY "Testimonials readable"
   TO public
   USING (true);
 
-CREATE POLICY "Testimonials admin manage"
+CREATE POLICY "Testimonials public manage"
   ON public.testimonials
   FOR ALL
-  TO authenticated
+  TO public
   USING (true)
   WITH CHECK (true);
 
@@ -101,10 +102,10 @@ CREATE POLICY "Editable readable"
   TO public
   USING (true);
 
-CREATE POLICY "Editable admin manage"
+CREATE POLICY "Editable public manage"
   ON public.editable_content
   FOR ALL
-  TO authenticated
+  TO public
   USING (true)
   WITH CHECK (true);
 
@@ -146,96 +147,6 @@ INSERT INTO public.testimonials (name, content, program, category) VALUES
   ('Emma Rodriguez', 'SpeakersCircle didn''t just teach me public speaking - it taught me leadership, time management, and how to work with others. These skills have been invaluable in my internships and part-time jobs.', 'Gavel Club Member', 'Alumni'),
   ('David Kim', 'I joined YLC because my parents thought it would help with my shyness. What I discovered was a passion for communication and a group of friends who supported each other. I''m now mentoring younger students!', 'YLC Graduate', 'Students');
 
-INSERT INTO public.events (title, date, time, description, payment_link) VALUES
-  ('Youth Leadership Circle - New Cohort', '2025-02-15', '4:00 PM - 5:30 PM', 'Introduction to public speaking and first meeting experience. Students will learn the meeting format and observe experienced speakers.', ''),
-  ('Professional Guest Speaker Workshop', '2025-03-08', '4:00 PM - 5:30 PM', 'Special workshop featuring a professional guest speaker discussing leadership in the workplace and effective communication strategies.', '');
-
--- =============================================
--- Default admin users (Supabase Auth)
--- =============================================
-DO $$
-DECLARE
-  admin jsonb;
-  new_user_id uuid;
-BEGIN
-  FOR admin IN
-    SELECT *
-    FROM jsonb_array_elements(
-      '[
-        {"email":"niksuravarjjala@gmail.com","password":"goatedmentor","full_name":"Nik Suravarjjala"},
-        {"email":"yvsdevi@gmail.com","password":"coordinatorgoat","full_name":"YVS Devi"},
-        {"email":"gallantgaveliers@gmail.com","password":"gallant12!","full_name":"Gallant Gaveliers"}
-      ]'::jsonb
-    )
-  LOOP
-    SELECT id
-      INTO new_user_id
-    FROM auth.users
-    WHERE email = admin->>'email'
-      AND deleted_at IS NULL
-    LIMIT 1;
-
-    IF new_user_id IS NOT NULL THEN
-      CONTINUE;
-    END IF;
-
-    INSERT INTO auth.users (
-      id,
-      instance_id,
-      aud,
-      role,
-      email,
-      encrypted_password,
-      email_confirmed_at,
-      last_sign_in_at,
-      raw_app_meta_data,
-      raw_user_meta_data,
-      is_super_admin,
-      created_at,
-      updated_at
-    )
-    VALUES (
-      gen_random_uuid(),
-      '00000000-0000-0000-0000-000000000000',
-      'authenticated',
-      'authenticated',
-      admin->>'email',
-      crypt(admin->>'password', gen_salt('bf')),
-      now(),
-      now(),
-      jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email')),
-      jsonb_build_object('role', 'admin', 'full_name', admin->>'full_name'),
-      false,
-      now(),
-      now()
-    )
-    RETURNING id INTO new_user_id;
-
-    INSERT INTO auth.identities (
-      id,
-      user_id,
-      identity_data,
-      provider,
-      provider_id,
-      last_sign_in_at,
-      created_at,
-      updated_at
-    )
-    VALUES (
-      gen_random_uuid(),
-      new_user_id,
-      jsonb_build_object(
-        'sub', new_user_id::text,
-        'email', admin->>'email',
-        'email_verified', true,
-        'phone_verified', false,
-        'provider', 'email'
-      ),
-      'email',
-      admin->>'email',
-      now(),
-      now(),
-      now()
-    );
-  END LOOP;
-END $$;
+INSERT INTO public.events (title, date, time, description, payment_link, event_type) VALUES
+  ('Youth Leadership Circle - New Cohort', '2025-02-15', '4:00 PM - 5:30 PM', 'Introduction to public speaking and first meeting experience. Students will learn the meeting format and observe experienced speakers.', '', 'Special Events'),
+  ('Professional Guest Speaker Workshop', '2025-03-08', '4:00 PM - 5:30 PM', 'Special workshop featuring a professional guest speaker discussing leadership in the workplace and effective communication strategies.', '', 'Special Events');
