@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom color variables based on the design reference */
+:root {
+  --salmon: #FA7C92;
+  --rain: #6EC4DB;
+  --buttermilk: #FFF7C0;
+  --leaf: #66AB8C;
+}
+
+/* Custom component styles */
+@layer components {
+  .form-input {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FA7C92] focus:border-transparent transition-colors;
+  }
+  
+  .form-textarea {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FA7C92] focus:border-transparent transition-colors resize-none;
+  }
+  
+  .form-select {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FA7C92] focus:border-transparent transition-colors bg-white;
+  }
+  
+  .btn-primary {
+    @apply bg-[#FA7C92] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#FA7C92]/90 transition-colors duration-200 shadow-lg;
+  }
+  
+  .btn-secondary {
+    @apply bg-[#66AB8C] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#66AB8C]/90 transition-colors duration-200 shadow-lg;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-[#66AB8C] text-[#66AB8C] px-6 py-3 rounded-lg font-semibold hover:bg-[#66AB8C] hover:text-white transition-colors duration-200 shadow-lg;
+  }
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #FA7C92;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e56b7f;
+}
+
+/* Typography improvements */
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.2;
+}
+
+p {
+  line-height: 1.6;
+}
+
+/* Focus styles for accessibility */
+button:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #FA7C92;
+  outline-offset: 2px;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  .mobile-padding {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
