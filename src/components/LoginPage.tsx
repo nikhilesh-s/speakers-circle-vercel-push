@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Shield, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 
 interface LoginPageProps {
   onPageChange: (page: string) => void;
 }
 
+const ADMIN_PASSCODE = 'SpeakersCircle2025!';
+
 export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -19,29 +19,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
     setIsLoading(true);
     setError('');
 
-    if (!supabase) {
-      setError('Database not configured. Please check your environment variables.');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setError('Invalid email or password. Please try again.');
-        setPassword('');
-      } else if (data.user) {
-        onPageChange('admin');
-      }
-    } catch (err) {
-      setError('Login failed. Please check your connection and try again.');
+    if (password === ADMIN_PASSCODE) {
+      onPageChange('admin');
+    } else {
+      setError('Invalid passcode. Please try again.');
       setPassword('');
     }
-    
+
     setIsLoading(false);
   };
 
@@ -54,27 +38,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
               <Shield className="text-white" size={24} />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Access</h1>
-            <p className="text-gray-600">Enter the admin password to continue</p>
+            <p className="text-gray-600">Enter the admin passcode to continue</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Admin Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FA7C92] focus:border-transparent"
-                placeholder="Enter admin email"
-                required
-              />
-            </div>
-            <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Admin Password
+                Admin Passcode
               </label>
               <div className="relative">
                 <input
@@ -83,7 +53,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FA7C92] focus:border-transparent pr-12"
-                  placeholder="Enter admin password"
+                  placeholder="Enter admin passcode"
                   required
                 />
                 <button
