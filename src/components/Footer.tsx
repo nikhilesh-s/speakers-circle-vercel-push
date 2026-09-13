@@ -70,12 +70,6 @@ export const Footer: React.FC<FooterProps> = ({ onPageChange }) => {
               >
                 Events
               </button>
-              <button
-                onClick={() => onPageChange('login')}
-                className="block text-gray-400 hover:text-white transition-colors duration-200"
-              >
-                Admin
-              </button>
             </div>
           </div>
 

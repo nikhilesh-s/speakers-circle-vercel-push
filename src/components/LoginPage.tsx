@@ -14,12 +14,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [message, setMessage] = useState('');
 
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setMessage('');
 
     try {
       if (!supabase) throw new Error('Sign-in is unavailable. Please try again later.');
@@ -41,6 +44,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
 
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(''); setMessage(''); setIsLoading(true);
+    try {
+      if (!supabase) throw new Error('Password reset is unavailable. Please try again later.');
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
+      if (resetError) throw new Error('Unable to send the reset email. Check the address and try again.');
+      setMessage('If an account exists for this email, a password reset link is on its way.');
+    } catch (resetError) { setError(resetError instanceof Error ? resetError.message : 'Unable to send the reset email.'); }
+    finally { setIsLoading(false); }
+  };
+
   return (
     <div className="pt-16 min-h-screen bg-gradient-to-br from-[#FFF7C0]/30 via-white to-[#6EC4DB]/10 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
@@ -53,13 +67,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
             <p className="text-gray-600">Sign in with your administrator account</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
+          <form onSubmit={forgotMode ? handleForgotPassword : handleLogin} className="space-y-6">
+            {!forgotMode && <div>
               <label htmlFor="admin-email" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input id="admin-email" type="email" autoComplete="username" required
                 value={email} onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-            </div>
+            </div>}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
@@ -91,6 +105,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
                 {error}
               </div>
             )}
+            {message && <div role="status" className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{message}</div>}
 
             <button
               type="submit"
@@ -100,9 +115,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
               {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
               ) : (
-                'Access Admin Panel'
+                forgotMode ? 'Send reset email' : 'Sign in'
               )}
             </button>
+            <button type="button" onClick={() => { setForgotMode(!forgotMode); setError(''); setMessage(''); }} className="w-full text-sm text-[#66AB8C] hover:underline">{forgotMode ? 'Back to sign in' : 'Forgot password?'}</button>
           </form>
 
           <div className="mt-8 pt-6 border-t border-gray-200 text-center">

@@ -14,6 +14,7 @@ import { LoginPage } from './components/LoginPage';
 import { AdminAccess } from './components/AdminAccess';
 import { AdminPage } from './components/AdminPage';
 import { ContactForm } from './components/ContactForm';
+import { PasswordResetPage } from './components/PasswordResetPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -35,6 +36,8 @@ function App() {
         return <OneOnOnePage />;
       case 'login':
         return <LoginPage onPageChange={setCurrentPage} />;
+      case 'reset-password':
+        return <PasswordResetPage onPageChange={setCurrentPage} />;
       case 'admin':
         return <AdminAccess onPageChange={setCurrentPage}><AdminPage onPageChange={setCurrentPage} /></AdminAccess>;
       default:
