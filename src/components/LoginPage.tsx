@@ -47,10 +47,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setMessage(''); setIsLoading(true);
     try {
+      if (!email.trim()) throw new Error('Enter your email to reset your password.');
       if (!supabase) throw new Error('Password reset is unavailable. Please try again later.');
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/reset-password` });
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: 'https://www.speakerscircle.org/reset-password' });
       if (resetError) throw new Error('Unable to send the reset email. Check the address and try again.');
-      setMessage('If an account exists for this email, a password reset link is on its way.');
+      setMessage('Check your email for a password reset link.');
     } catch (resetError) { setError(resetError instanceof Error ? resetError.message : 'Unable to send the reset email.'); }
     finally { setIsLoading(false); }
   };
@@ -68,13 +69,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
           </div>
 
           <form onSubmit={forgotMode ? handleForgotPassword : handleLogin} className="space-y-6">
-            {!forgotMode && <div>
+            <div>
               <label htmlFor="admin-email" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <input id="admin-email" type="email" autoComplete="username" required
                 value={email} onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
-            </div>}
-            <div>
+            </div>
+            {!forgotMode && <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
@@ -98,7 +99,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-            </div>
+            </div>}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
