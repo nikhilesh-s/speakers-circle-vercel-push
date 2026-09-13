@@ -5,7 +5,8 @@ node_modules/
 dist/
 
 # Environment / editor files
-.env.local
-.env.*.local
+.env
+.env.*
+!.env.example
 .DS_Store
 *.log
