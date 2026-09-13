@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle, Clock, Users, DollarSign, ArrowRight } from 'lucide-react';
+import { CheckCircle, Clock, Users, ArrowRight } from 'lucide-react';
 import { useEditableContent } from '../hooks/useSupabase';
 
 interface InformationPageProps {

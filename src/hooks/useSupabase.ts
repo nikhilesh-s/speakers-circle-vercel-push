@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { supabase, safeSupabaseOperation, Event, Testimonial, EditableContent } from '../lib/supabase';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase, safeSupabaseOperation, Event, Testimonial } from '../lib/supabase';
 
 export const useEvents = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -8,10 +8,11 @@ export const useEvents = () => {
   const fetchEvents = async () => {
     const result = await safeSupabaseOperation(
       async () => {
-        const { data } = await supabase!
+        const { data, error } = await supabase!
           .from('events')
           .select('*')
           .order('date', { ascending: true });
+        if (error) throw error;
         return data || [];
       },
       []
@@ -34,10 +35,11 @@ export const useTestimonials = () => {
   const fetchTestimonials = async () => {
     const result = await safeSupabaseOperation(
       async () => {
-        const { data } = await supabase!
+        const { data, error } = await supabase!
           .from('testimonials')
           .select('*')
           .order('created_at', { ascending: false });
+        if (error) throw error;
         return data || [];
       },
       [
@@ -74,25 +76,26 @@ export const useEditableContent = (section: string) => {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const fetchContent = async () => {
+  const fetchContent = useCallback(async () => {
     const result = await safeSupabaseOperation(
       async () => {
-        const { data } = await supabase!
+        const { data, error } = await supabase!
           .from('editable_content')
           .select('content')
           .eq('section', section)
           .maybeSingle();
+        if (error) throw error;
         return data?.content || '';
       },
       ''
     );
     setContent(result);
     setLoading(false);
-  };
+  }, [section]);
 
   useEffect(() => {
     fetchContent();
-  }, [section]);
+  }, [fetchContent]);
 
   return { content, loading, refetch: fetchContent };
 };

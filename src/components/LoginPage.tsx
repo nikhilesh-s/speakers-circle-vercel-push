@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { isAdminUser } from '../lib/admin';
 import { Shield, Eye, EyeOff } from 'lucide-react';
 
 interface LoginPageProps {
   onPageChange: (page: string) => void;
 }
 
-const ADMIN_PASSCODE = 'SpeakersCircle2025!';
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -19,14 +21,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
     setIsLoading(true);
     setError('');
 
-    if (password === ADMIN_PASSCODE) {
+    try {
+      if (!supabase) throw new Error('Sign-in is unavailable. Please try again later.');
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(), password,
+      });
+      if (signInError) throw new Error('Unable to sign in. Check your email and password.');
+      if (!isAdminUser(data.user)) {
+        await supabase.auth.signOut();
+        throw new Error('This account does not have administrator access.');
+      }
       onPageChange('admin');
-    } else {
-      setError('Invalid passcode. Please try again.');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Unable to sign in. Please try again.');
+    } finally {
       setPassword('');
+      setIsLoading(false);
     }
 
-    setIsLoading(false);
   };
 
   return (
@@ -38,27 +50,35 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onPageChange }) => {
               <Shield className="text-white" size={24} />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Access</h1>
-            <p className="text-gray-600">Enter the admin passcode to continue</p>
+            <p className="text-gray-600">Sign in with your administrator account</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
+              <label htmlFor="admin-email" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <input id="admin-email" type="email" autoComplete="username" required
+                value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Admin Passcode
+                Password
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FA7C92] focus:border-transparent pr-12"
-                  placeholder="Enter admin passcode"
+                  placeholder="Enter your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}

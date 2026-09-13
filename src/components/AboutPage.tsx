@@ -1,3 +1,4 @@
+import { sanitizeHtml } from '../lib/sanitize';
 import React from 'react';
 import { useEditableContent } from '../hooks/useSupabase';
 
@@ -31,7 +32,7 @@ export const AboutPage: React.FC = () => {
                 {!aboutLoading && aboutContent ? (
                   <div 
                     className="space-y-6 text-gray-700 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: aboutContent }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(aboutContent) }}
                   />
                 ) : (
                   <div className="space-y-6 text-gray-700 leading-relaxed">

@@ -10,3 +10,9 @@ dist/
 !.env.example
 .DS_Store
 *.log
+
+# Local tooling output
+*.tsbuildinfo
+.vercel/
+playwright-report/
+test-results/

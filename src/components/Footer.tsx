@@ -7,9 +7,9 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onPageChange }) => {
-  const instagramLink = useEditableContent('instagram_link');
-  const facebookLink = useEditableContent('facebook_link');
-  const youtubeLink = useEditableContent('youtube_link');
+  const { content: instagramLink } = useEditableContent('instagram_link');
+  const { content: facebookLink } = useEditableContent('facebook_link');
+  const { content: youtubeLink } = useEditableContent('youtube_link');
 
   return (
     <footer className="bg-gray-900 text-white py-12">
@@ -71,7 +71,7 @@ export const Footer: React.FC<FooterProps> = ({ onPageChange }) => {
                 Events
               </button>
               <button
-                onClick={() => onPageChange('admin')}
+                onClick={() => onPageChange('login')}
                 className="block text-gray-400 hover:text-white transition-colors duration-200"
               >
                 Admin

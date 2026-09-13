@@ -1,16 +1,25 @@
+import { sanitizeHtml } from '../lib/sanitize';
 import React, { useState, useEffect } from 'react';
-import { LogOut, Plus, Edit2, Trash2, Save, X, Calendar, Users, MessageSquare, Link, Settings } from 'lucide-react';
+import { LogOut, Edit2, Trash2, Save, X, Calendar, Users, MessageSquare, Link } from 'lucide-react';
 import { supabase, safeSupabaseOperation, Event, Testimonial, EditableContent } from '../lib/supabase';
+import { isAdminUser } from '../lib/admin';
 import { RichTextEditor } from './RichTextEditor';
 
 interface AdminPageProps {
   onPageChange: (page: string) => void;
 }
 
+// This also prevents stale UI handlers from falling back to anonymous writes.
+// Production database RLS must enforce the same role for direct API clients.
+const safeAdminOperation = async <T,>(operation: () => Promise<T>, fallback: T): Promise<T> =>
+  safeSupabaseOperation(async () => {
+    const { data, error } = await supabase!.auth.getUser();
+    if (error || !isAdminUser(data.user)) throw new Error('Administrator access required.');
+    return operation();
+  }, fallback);
+
 export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
   const [activeTab, setActiveTab] = useState('content');
-  const [isAuthenticated] = useState(true);
-  const [loading, setLoading] = useState(false);
 
   // Events state
   const [events, setEvents] = useState<Event[]>([]);
@@ -52,19 +61,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
   }, []);
 
   const fetchData = async () => {
-    console.log('Fetching admin data...');
-    
+
     if (!supabase) {
       console.warn('Supabase not configured, skipping data fetch');
       return;
     }
 
     // Fetch events
-    console.log('Fetching events...');
+
     const eventsResult = await safeSupabaseOperation(
       async () => {
-        const { data } = await supabase!.from('events').select('*').order('date', { ascending: true });
-        console.log('Events fetched:', data);
+        const { data, error } = await supabase!.from('events').select('*').order('date', { ascending: true });
+
+        if (error) throw error;
         return data || [];
       },
       []
@@ -72,11 +81,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
     setEvents(eventsResult);
 
     // Fetch testimonials
-    console.log('Fetching testimonials...');
+
     const testimonialsResult = await safeSupabaseOperation(
       async () => {
-        const { data } = await supabase!.from('testimonials').select('*').order('created_at', { ascending: false });
-        console.log('Testimonials fetched:', data);
+        const { data, error } = await supabase!.from('testimonials').select('*').order('created_at', { ascending: false });
+
+        if (error) throw error;
         return data || [];
       },
       []
@@ -84,11 +94,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
     setTestimonials(testimonialsResult);
 
     // Fetch editable content
-    console.log('Fetching editable content...');
+
     const contentResult = await safeSupabaseOperation(
       async () => {
-        const { data } = await supabase!.from('editable_content').select('*');
-        console.log('Content fetched:', data);
+        const { data, error } = await supabase!.from('editable_content').select('*');
+
+        if (error) throw error;
         return data || [];
       },
       []
@@ -103,23 +114,20 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
         contentObj[item.section] = item.content;
       }
     });
-    console.log('Content organized:', { contentObj, linksObj });
+
     setEditableContent(contentObj);
     setSiteLinks(linksObj);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const result = await supabase?.auth.signOut();
+    if (result?.error) { alert('Unable to sign out. Please try again.'); return; }
     onPageChange('home');
   };
 
   const handleEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log('=== EVENT SUBMISSION DEBUG ===');
-    console.log('Raw form data:', newEvent);
-    console.log('Supabase client exists:', !!supabase);
-    console.log('User authenticated:', isAuthenticated);
-    
+
     if (!supabase) {
       console.error('Supabase not configured');
       alert('Database not configured. Please check your environment variables.');
@@ -127,18 +135,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
     }
     
     if (editingEvent) {
-      console.log('=== UPDATING EXISTING EVENT ===');
-      console.log('Event ID:', editingEvent.id);
-      console.log('Update data:', newEvent);
-      
+
       // Update existing event
-      const result = await safeSupabaseOperation(
+      const result = await safeAdminOperation(
         async () => {
-          console.log('Executing update query...');
+
           const { error } = await supabase!
             .from('events')
-            .update(newEvent)
-            .eq('id', editingEvent.id);
+            .update({ ...newEvent, recurrence_type: newEvent.is_recurring ? newEvent.recurrence_type : null, recurrence_end_date: newEvent.is_recurring && newEvent.recurrence_end_date ? newEvent.recurrence_end_date : null })
+            .eq('id', editingEvent.id).select('id').single();
           if (error) {
             console.error('UPDATE ERROR DETAILS:', {
               message: error.message,
@@ -148,7 +153,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
             });
             throw error;
           }
-          console.log('UPDATE SUCCESS');
+
           return true;
         },
         false
@@ -162,6 +167,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
           time: '', 
           description: '', 
           payment_link: '',
+          event_type: 'Special Events',
           is_recurring: false,
           recurrence_type: '',
           recurrence_days: [],
@@ -174,8 +180,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
       }
     } else {
       // Create new event
-      console.log('=== CREATING NEW EVENT ===');
-      
+
       // Clean up the data before sending
       const eventData = {
         title: newEvent.title.trim(),
@@ -183,31 +188,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
         time: newEvent.time.trim(),
         description: newEvent.description.trim(),
         payment_link: newEvent.payment_link?.trim() || '',
+        event_type: newEvent.event_type,
         is_recurring: newEvent.is_recurring || false,
         recurrence_type: newEvent.is_recurring ? newEvent.recurrence_type : null,
         recurrence_days: newEvent.is_recurring ? newEvent.recurrence_days : [],
         recurrence_end_date: newEvent.is_recurring && newEvent.recurrence_end_date ? newEvent.recurrence_end_date : null
       };
-      
-      console.log('Cleaned event data:', eventData);
-      console.log('Data types check:', {
-        title: typeof eventData.title,
-        date: typeof eventData.date,
-        time: typeof eventData.time,
-        description: typeof eventData.description,
-        payment_link: typeof eventData.payment_link,
-        is_recurring: typeof eventData.is_recurring,
-        recurrence_type: typeof eventData.recurrence_type,
-        recurrence_days: Array.isArray(eventData.recurrence_days),
-        recurrence_end_date: typeof eventData.recurrence_end_date
-      });
-      
-      const result = await safeSupabaseOperation(
+
+      const result = await safeAdminOperation(
         async () => {
-          console.log('Executing insert query...');
+
           const { error } = await supabase!
             .from('events')
-            .insert(eventData);
+            .insert(eventData).select('id').single();
           if (error) {
             console.error('INSERT ERROR DETAILS:', {
               message: error.message,
@@ -218,7 +211,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
             });
             throw error;
           }
-          console.log('INSERT SUCCESS');
+
           return true;
         },
         false
@@ -231,6 +224,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
           time: '', 
           description: '', 
           payment_link: '',
+          event_type: 'Special Events',
           is_recurring: false,
           recurrence_type: '',
           recurrence_days: [],
@@ -247,9 +241,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
 
   const handleTestimonialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log('Attempting to submit testimonial:', newTestimonial);
-    
+
     if (!supabase) {
       console.error('Supabase not configured');
       alert('Database not configured. Please check your environment variables.');
@@ -258,9 +250,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
     
     if (editingTestimonial) {
       // Update existing testimonial
-      const result = await safeSupabaseOperation(
+      const result = await safeAdminOperation(
         async () => {
-          console.log('Updating testimonial:', editingTestimonial.id);
+
           const { error } = await supabase!
             .from('testimonials')
             .update({
@@ -268,12 +260,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
               content: newTestimonial.content,
               category: newTestimonial.category
             })
-            .eq('id', editingTestimonial.id);
+            .eq('id', editingTestimonial.id).select('id').single();
           if (error) {
             console.error('Testimonial update error:', error);
             throw error;
           }
-          console.log('Testimonial updated successfully');
+
           return true;
         },
         false
@@ -289,22 +281,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
       }
     } else {
       // Create new testimonial
-      console.log('Creating new testimonial...');
-      const result = await safeSupabaseOperation(
+
+      const result = await safeAdminOperation(
         async () => {
-          console.log('Inserting new testimonial...');
+
           const { error } = await supabase!
             .from('testimonials')
             .insert({
               name: newTestimonial.name,
               content: newTestimonial.content,
               category: newTestimonial.category
-            });
+            }).select('id').single();
           if (error) {
             console.error('Testimonial insert error:', error);
             throw error;
           }
-          console.log('Testimonial inserted successfully');
+
           return true;
         },
         false
@@ -321,32 +313,29 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
   };
 
   const handleContentUpdate = async (section: string, content: string) => {
-    console.log('Attempting to update content:', section, content);
-    
+
     if (!supabase) {
       console.error('Supabase not configured');
       alert('Database not configured. Please check your environment variables.');
       return;
     }
 
-    const result = await safeSupabaseOperation(
+    const result = await safeAdminOperation(
       async () => {
-        console.log('Executing upsert operation...');
+
         const { error } = await supabase!
           .from('editable_content')
-          .upsert({ section, content, updated_at: new Date().toISOString() }, { onConflict: 'section' });
+          .upsert({ section, content, updated_at: new Date().toISOString() }, { onConflict: 'section' }).select('id').single();
         if (error) {
           console.error('Supabase upsert error:', error);
           throw error;
         }
-        console.log('Upsert successful');
+
         return true;
       },
       false
     );
-    
-    console.log('Operation result:', result);
-    
+
     if (result) {
       setEditableContent({ ...editableContent, [section]: content });
       setEditingContent(null);
@@ -358,32 +347,29 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
   };
 
   const handleLinkUpdate = async (section: string, link: string) => {
-    console.log('Attempting to update link:', section, link);
-    
+
     if (!supabase) {
       console.error('Supabase not configured');
       alert('Database not configured. Please check your environment variables.');
       return;
     }
 
-    const result = await safeSupabaseOperation(
+    const result = await safeAdminOperation(
       async () => {
-        console.log('Executing link upsert operation...');
+
         const { error } = await supabase!
           .from('editable_content')
-          .upsert({ section, content: link, updated_at: new Date().toISOString() }, { onConflict: 'section' });
+          .upsert({ section, content: link, updated_at: new Date().toISOString() }, { onConflict: 'section' }).select('id').single();
         if (error) {
           console.error('Supabase link upsert error:', error);
           throw error;
         }
-        console.log('Link upsert successful');
+
         return true;
       },
       false
     );
-    
-    console.log('Link operation result:', result);
-    
+
     if (result) {
       setSiteLinks({ ...siteLinks, [section]: link });
       setEditingLink(null);
@@ -396,9 +382,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
 
   const deleteEvent = async (id: string) => {
     if (confirm('Are you sure you want to delete this event?')) {
-      const result = await safeSupabaseOperation(
+      const result = await safeAdminOperation(
         async () => {
-          const { error } = await supabase!.from('events').delete().eq('id', id);
+          const { error } = await supabase!.from('events').delete().eq('id', id).select('id').single();
           if (error) throw error;
           return true;
         },
@@ -411,9 +397,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
 
   const deleteTestimonial = async (id: string) => {
     if (confirm('Are you sure you want to delete this testimonial?')) {
-      const result = await safeSupabaseOperation(
+      const result = await safeAdminOperation(
         async () => {
-          const { error } = await supabase!.from('testimonials').delete().eq('id', id);
+          const { error } = await supabase!.from('testimonials').delete().eq('id', id).select('id').single();
           if (error) throw error;
           return true;
         },
@@ -423,19 +409,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
       if (result) fetchData();
     }
   };
-
-  if (loading) {
-    return (
-      <div className="pt-16 min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FA7C92]"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    onPageChange('login');
-    return null;
-  }
 
   return (
     <div className="pt-16 min-h-screen bg-gray-50">
@@ -730,6 +703,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
                             time: event.time,
                             description: event.description,
                             payment_link: event.payment_link || '',
+                            event_type: event.event_type || 'Special Events',
                             is_recurring: event.is_recurring || false,
                             recurrence_type: event.recurrence_type || '',
                             recurrence_days: event.recurrence_days || [],
@@ -766,7 +740,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
                   <button
                     onClick={() => {
                       setEditingTestimonial(null);
-                      setNewTestimonial({ name: '', content: '', program: '' });
+                      setNewTestimonial({ name: '', content: '', category: 'Students' });
                     }}
                     className="text-gray-500 hover:text-gray-700"
                   >
@@ -847,7 +821,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
                           setNewTestimonial({
                             name: testimonial.name,
                             content: testimonial.content,
-                            program: testimonial.program
+                            category: testimonial.category || 'Students'
                           });
                         }}
                         className="text-blue-600 hover:text-blue-800"
@@ -972,6 +946,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
                     <p className="text-sm text-gray-600">{section.description}</p>
                   </div>
                   <button
+                    aria-label={`Edit ${section.label}`}
                     onClick={() => {
                       setEditingContent(section.key);
                       setTempContent(editableContent[section.key] || '');
@@ -1050,7 +1025,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onPageChange }) => {
                       <div 
                         className="text-gray-700"
                         dangerouslySetInnerHTML={{ 
-                          __html: editableContent[section.key] || '<p class="text-gray-500 italic">No content set yet. Click edit to add content.</p>' 
+                          __html: sanitizeHtml(editableContent[section.key] || '<p class="text-gray-500 italic">No content set yet. Click edit to add content.</p>')
                         }} 
                       />
                     ) : section.key === 'impact_stats' ? (

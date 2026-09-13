@@ -29,6 +29,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({ isOpen, onClose }) => 
             .from('contact_submissions')
             .insert({
               name: formData.name,
+              email: formData.email,
+              phone: formData.phone || null,
               message: formData.message
             });
           if (error) throw error;
@@ -39,25 +41,15 @@ export const ContactForm: React.FC<ContactFormProps> = ({ isOpen, onClose }) => 
 
       if (result) {
         setSubmitStatus('success');
-        setFormData({ name: '', message: '' });
+        setFormData({ name: '', email: '', phone: '', message: '' });
         setTimeout(() => {
           onClose();
           setSubmitStatus('idle');
         }, 2000);
       } else {
-        // Fallback: create mailto link
-        const subject = encodeURIComponent('Contact from SpeakersCircle Website');
-        const body = encodeURIComponent(`Name: ${formData.name}\n\nMessage: ${formData.message}`);
-        const mailtoLink = `mailto:gallantgaveliers@gmail.com?subject=${subject}&body=${body}`;
-        
-        // Create a temporary link and click it to open email client
-        const tempLink = document.createElement('a');
-        tempLink.href = mailtoLink;
-        tempLink.click();
-        
-        setSubmitStatus('success');
+        setSubmitStatus('error');
       }
-    } catch (error) {
+    } catch {
       setSubmitStatus('error');
     } finally {
       setIsSubmitting(false);
@@ -102,6 +94,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({ isOpen, onClose }) => 
                 type="text"
                 id="name"
                 name="name"
+                maxLength={200}
                 required
                 value={formData.name}
                 onChange={handleInputChange}
@@ -147,6 +140,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({ isOpen, onClose }) => 
               <textarea
                 id="message"
                 name="message"
+                maxLength={10000}
                 required
                 rows={4}
                 value={formData.message}

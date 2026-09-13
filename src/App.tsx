@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 
 // Components
@@ -11,6 +11,7 @@ import EventsPage from './components/EventsPage';
 import TestimonialsPage from './components/TestimonialsPage';
 import OneOnOnePage from './components/OneOnOnePage';
 import { LoginPage } from './components/LoginPage';
+import { AdminAccess } from './components/AdminAccess';
 import { AdminPage } from './components/AdminPage';
 import { ContactForm } from './components/ContactForm';
 
@@ -35,7 +36,7 @@ function App() {
       case 'login':
         return <LoginPage onPageChange={setCurrentPage} />;
       case 'admin':
-        return <AdminPage onPageChange={setCurrentPage} />;
+        return <AdminAccess onPageChange={setCurrentPage}><AdminPage onPageChange={setCurrentPage} /></AdminAccess>;
       default:
         return <HomePage onPageChange={setCurrentPage} />;
     }

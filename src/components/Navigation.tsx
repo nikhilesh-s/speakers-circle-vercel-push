@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Users } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 interface NavigationProps {
   currentPage: string;
@@ -66,6 +66,8 @@ export const Navigation: React.FC<NavigationProps> = ({ currentPage, onPageChang
           <div className="lg:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
+              aria-label="Toggle navigation"
+              aria-expanded={isOpen}
               className="text-gray-700 hover:text-[#FA7C92] p-2"
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}

@@ -1,3 +1,4 @@
+import { sanitizeHtml } from '../lib/sanitize';
 import React from 'react';
 import { ArrowRight, BookOpen, Users, Award } from 'lucide-react';
 import { useTestimonials, useEditableContent } from '../hooks/useSupabase';
@@ -131,7 +132,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onPageChange }) => {
           
           {!newsletterLoading && newsletterContent && (
             <div className="bg-white rounded-2xl p-8 shadow-lg mb-8">
-              <div dangerouslySetInnerHTML={{ __html: newsletterContent }} />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(newsletterContent) }} />
             </div>
           )}
           
@@ -166,7 +167,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onPageChange }) => {
 
           {!testimonialsLoading && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {testimonials.map((testimonial, index) => (
+              {testimonials.map((testimonial) => (
                 <div
                   key={testimonial.id}
                   className="bg-gradient-to-br from-gray-50 to-white p-8 rounded-2xl shadow-lg border border-gray-100"

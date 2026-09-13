@@ -126,7 +126,7 @@ const TestimonialsPage: React.FC = () => {
               {/* Add more testimonials if we have them */}
               {testimonials.length > 4 && (
                 <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {testimonials.slice(4).map((testimonial, index) => (
+                  {testimonials.slice(4).map((testimonial) => (
                     <div
                       key={testimonial.id}
                       className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300"

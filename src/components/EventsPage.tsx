@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, ChevronLeft, ChevronRight, MapPin, Plus } from 'lucide-react';
+import { Calendar, Clock, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import type { Event } from '../lib/supabase';
 import { useEvents, useEditableContent } from '../hooks/useSupabase';
+
+type CalendarEvent = Event & { isRecurring?: boolean };
 
 const EventsPage: React.FC = () => {
   const { events, loading } = useEvents();
@@ -17,8 +20,8 @@ const EventsPage: React.FC = () => {
   // No longer generating hardcoded Gavel Club meetings - all events come from admin panel
 
   // Generate recurring events from database for current month
-  const generateRecurringEvents = (baseEvents: any[], year: number, month: number) => {
-    const generatedEvents = [];
+  const generateRecurringEvents = (baseEvents: Event[], year: number, month: number) => {
+    const generatedEvents: CalendarEvent[] = [];
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
     for (const event of baseEvents) {
@@ -26,7 +29,6 @@ const EventsPage: React.FC = () => {
       
       const eventDate = new Date(event.date);
       const currentMonthStart = new Date(year, month, 1);
-      const currentMonthEnd = new Date(year, month + 1, 0);
       
       // Check if we should generate events for this month
       if (event.recurrence_end_date) {
@@ -71,7 +73,7 @@ const EventsPage: React.FC = () => {
   };
   
   const recurringEvents = generateRecurringEvents(events, currentYear, currentMonth);
-  const allEvents = [...oneTimeEvents, ...recurringEvents];
+  const allEvents: CalendarEvent[] = [...oneTimeEvents, ...recurringEvents];
 
   // Calendar helper functions
   const getDaysInMonth = (date: Date) => {
@@ -108,7 +110,7 @@ const EventsPage: React.FC = () => {
     });
   };
 
-  const getEventTypeColor = (event: any) => {
+  const getEventTypeColor = (event: Event) => {
     if (event.event_type === 'YLC' || event.title.toLowerCase().includes('ylc') || event.title.toLowerCase().includes('youth leadership')) {
       return 'bg-[#FA7C92] text-white';
     }
@@ -163,6 +165,7 @@ const EventsPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <button
                       onClick={() => navigateMonth('prev')}
+                      aria-label="Previous month"
                       className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors duration-200"
                     >
                       <ChevronLeft size={24} />
@@ -174,6 +177,7 @@ const EventsPage: React.FC = () => {
                     
                     <button
                       onClick={() => navigateMonth('next')}
+                      aria-label="Next month"
                       className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors duration-200"
                     >
                       <ChevronRight size={24} />

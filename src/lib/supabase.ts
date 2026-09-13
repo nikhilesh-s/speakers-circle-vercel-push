@@ -2,11 +2,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-// Prefer Supabase's current publishable key format; keep the legacy anon key as a
-// temporary fallback so existing deployments continue working during migration.
-const supabasePublicKey =
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabasePublicKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+if (supabasePublicKey && !supabasePublicKey.startsWith('sb_publishable_')) {
+  throw new Error('A modern Supabase publishable key is required.');
+}
 
 export const supabase = supabaseUrl && supabasePublicKey
   ? createClient(supabaseUrl, supabasePublicKey)
@@ -27,19 +27,10 @@ export const safeSupabaseOperation = async <T>(
   }
   
   try {
-    console.log('Executing Supabase operation...');
     return await operation();
-  } catch (error) {
-    console.error('=== SUPABASE OPERATION FAILED ===');
-    console.error('Error object:', error);
-    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    
-    // If it's an authentication error, still return fallback
-    if (error instanceof Error && error.message.includes('JWT')) {
-      console.warn('Authentication error, using fallback');
-    }
-    
+  } catch {
+    console.error('Database operation failed. Please try again.');
+
     return fallback;
   }
 };

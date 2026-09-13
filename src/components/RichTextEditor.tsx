@@ -1,4 +1,5 @@
-import React, { useRef, useEffect } from 'react';
+import { sanitizeHtml } from '../lib/sanitize';
+import React, { useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -37,7 +38,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   return (
     <div className="rich-text-editor">
-      <style jsx>{`
+      <style>{`
         .rich-text-editor .ql-editor {
           min-height: ${height};
           font-family: inherit;
@@ -61,8 +62,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <ReactQuill
         ref={quillRef}
         theme="snow"
-        value={value}
-        onChange={onChange}
+        value={sanitizeHtml(value)}
+        onChange={(html) => onChange(sanitizeHtml(html))}
         modules={modules}
         formats={formats}
         placeholder={placeholder}
